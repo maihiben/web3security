@@ -101,6 +101,31 @@
   color: #155724;
 }
 
+.loader {
+  font-size: 18px;
+  text-align: center;
+  margin-top: 20px;
+  color: #333; /* Change to desired color */
+}
+
+.dismissButton {
+  margin-left: 10px;
+  background: none;
+  border: none;
+  color: #007bff; /* Adjust color as needed */
+  cursor: pointer;
+}
+
+.logoutButton {
+  margin-top: 20px;
+  padding: 10px 20px;
+  background-color: #ff4d4d; /* Adjust color as needed */
+  color: white;
+  border: none;
+  cursor: pointer;
+  border-radius: 4px;
+}
+
 @media (max-width: 768px) {
   .card {
     padding: 20px;
