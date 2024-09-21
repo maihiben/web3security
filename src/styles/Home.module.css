@@ -320,3 +320,53 @@ span.button:hover {
   margin-top: 10px;
   font-size: 14px;
 }
+
+.footer {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 20px;
+  background-color: #f1f1f1;
+  border-top: 1px solid #e1e1e1;
+}
+
+.socialMedia {
+  display: flex;
+  gap: 15px;
+  margin-bottom: 10px;
+}
+
+.socialMedia a {
+  color: #333;
+  transition: color 0.3s;
+}
+
+.socialMedia a:hover {
+  color: #0070f3; /* Change this color to your theme's color */
+}
+
+.footerText {
+  text-align: center;
+  font-size: 14px;
+  color: #666;
+}
+
+.footerText a {
+  color: #0070f3; /* Change this color to your theme's color */
+  text-decoration: none;
+}
+
+.footerText a:hover {
+  text-decoration: underline;
+}
+
+.persistentNotice {
+  background-color: #d4edda; /* Green background for success */
+  color: #155724; /* Dark green text */
+  padding: 0.5rem;
+  border: 1px solid #c3e6cb;
+  border-radius: 5px;
+  text-align: center;
+  margin-top: 1rem;
+  font-weight: bold;
+}

